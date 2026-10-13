@@ -5,200 +5,211 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BillSahi</title>
 <meta name="description" content="Check every supplier bill for the wrong GST rate, and find the right HSN code for your shop's items, from the official CBIC notifications.">
+<meta name="color-scheme" content="light">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f6f7f5; --surface: #ffffff; --surface-2: #f0f3ef; --ink: #14201b; --ink-2: #4c5a53; --ink-3: #7c8a83;
-    --line: #e1e7e2; --brand: #0b7a5a; --brand-ink: #ffffff; --brand-soft: #e3f4ec;
-    --ok: #13805b; --ok-soft: #e4f5ec; --bad: #c2341f; --bad-soft: #fdecea; --warn: #a75a00; --warn-soft: #fff3e0;
-    --s0: #6b7280; --s5: #13805b; --s18: #2457c5; --s40: #b42318; --s3: #7a4cc2;
-    --radius: 16px; --shadow: 0 1px 2px rgba(16,24,20,.05), 0 8px 24px rgba(16,24,20,.06);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0e1412; --surface: #151d1a; --surface-2: #1b2521; --ink: #eaf1ed; --ink-2: #aab8b1; --ink-3: #7f8e87;
-      --line: #26322d; --brand: #3ccf98; --brand-ink: #062419; --brand-soft: #123327;
-      --ok: #48d39c; --ok-soft: #10301f; --bad: #ff7b6b; --bad-soft: #3a1611; --warn: #ffb547; --warn-soft: #3a2a0d;
-      --s0: #9aa4ae; --s5: #48d39c; --s18: #7aa7ff; --s40: #ff8a7d; --s3: #b796ff;
-      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
-    }
+    --paper: #ffffff; --page: #fbfaf7; --ink: #1a1714; --ink-2: #5b554e; --ink-3: #8c857c;
+    --rule: #e8e3da; --rule-strong: #cfc7b9; --ledger: #b3261e; --ledger-soft: #fbeceb;
+    --money: #1d6b45; --money-soft: #e9f4ee; --amber: #9a5b00; --amber-soft: #fdf3e2;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink); }
-  body { font: 16px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
-  a { color: var(--brand); }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  html, body { margin: 0; background: var(--page); color: var(--ink); }
+  body { font: 16px/1.6 "IBM Plex Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--ink); text-decoration-color: var(--rule-strong); text-underline-offset: 3px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
 
-  header.top { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(10px); background: color-mix(in srgb, var(--bg) 82%, transparent); border-bottom: 1px solid var(--line); }
-  .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
-  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; letter-spacing: -.01em; }
-  .mark { width: 32px; height: 32px; border-radius: 9px; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font-weight: 800; }
-  .top nav a { color: var(--ink-2); text-decoration: none; font-size: .92rem; margin-left: 18px; }
+  /* masthead, like the ruled header of a ledger page */
+  .mast { border-bottom: 2px solid var(--ink); background: var(--paper); }
+  .mast .wrap { display: flex; align-items: baseline; justify-content: space-between; padding-top: 18px; padding-bottom: 12px; }
+  .brand { font-family: Fraunces, Georgia, serif; font-weight: 800; font-size: 1.6rem; letter-spacing: -.02em; }
+  .brand em { font-style: normal; color: var(--ledger); }
+  .mast .meta { font-family: var(--mono); font-size: .78rem; color: var(--ink-3); letter-spacing: .02em; }
+  .mast .meta a { color: var(--ink-2); }
 
-  .hero { padding: 48px 0 24px; }
-  .eyebrow { display: inline-block; font-size: .8rem; font-weight: 600; color: var(--brand); background: var(--brand-soft); padding: 4px 10px; border-radius: 999px; }
-  h1 { font-size: clamp(1.9rem, 4.6vw, 3rem); line-height: 1.1; letter-spacing: -.025em; margin: 14px 0 12px; font-weight: 800; }
-  .lead { font-size: 1.1rem; color: var(--ink-2); max-width: 640px; margin: 0; }
+  .grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; padding: 44px 16px 56px; }
+  h1 { font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: clamp(2.1rem, 4.4vw, 3.4rem); line-height: 1.04; letter-spacing: -.03em; margin: 0 0 18px; }
+  h1 span { background: linear-gradient(transparent 62%, #f7d9d6 62%); }
+  .lead { font-size: 1.08rem; color: var(--ink-2); max-width: 520px; margin: 0 0 28px; }
 
-  .tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; margin: 28px 0 16px; }
-  .tabs button { border: 0; background: transparent; color: var(--ink-2); font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 9px; cursor: pointer; }
-  .tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+  .switch { display: flex; border-bottom: 1px solid var(--rule-strong); margin-bottom: 18px; }
+  .switch button { background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px; padding: 10px 2px; margin-right: 26px; font: inherit; font-weight: 600; color: var(--ink-3); cursor: pointer; }
+  .switch button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ledger); }
 
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; }
-  .drop { border: 2px dashed var(--line); border-radius: 14px; padding: 28px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; display: block; }
-  .drop:hover, .drop.over { border-color: var(--brand); background: var(--brand-soft); }
-  .drop strong { display: block; font-size: 1.05rem; margin-bottom: 4px; }
-  .drop span { color: var(--ink-3); font-size: .92rem; }
-  .preview { display: none; gap: 14px; align-items: center; margin-top: 14px; }
-  .preview img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
-  .preview .name { font-weight: 600; word-break: break-all; }
-  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
-  .btn { background: var(--brand); color: var(--brand-ink); border: 0; font: inherit; font-weight: 700; padding: 12px 20px; border-radius: 11px; cursor: pointer; }
-  .btn:disabled { opacity: .5; cursor: not-allowed; }
-  .btn.ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line); font-weight: 600; }
-  textarea { width: 100%; min-height: 160px; font: inherit; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--ink); resize: vertical; }
-  label.lbl { display: block; font-weight: 600; margin-bottom: 8px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .chip { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 4px 10px; font-size: .85rem; cursor: pointer; }
+  .drop { display: block; background: var(--paper); border: 1.5px dashed var(--rule-strong); border-radius: 4px; padding: 26px 22px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .drop:hover, .drop.over { border-color: var(--ink); background: #fffdf8; }
+  .drop b { display: block; font-size: 1.02rem; }
+  .drop small { color: var(--ink-3); }
+  .picked { display: none; align-items: center; gap: 12px; margin-top: 12px; font-size: .92rem; }
+  .picked img { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--rule); border-radius: 3px; }
+  .picked .fn { font-family: var(--mono); font-size: .84rem; word-break: break-all; }
+  textarea { width: 100%; min-height: 168px; font: 15px/1.7 var(--mono); padding: 12px 14px; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--paper) repeating-linear-gradient(transparent, transparent 25px, var(--rule) 26px); background-attachment: local; color: var(--ink); resize: vertical; }
+  .try { margin-top: 10px; font-size: .88rem; color: var(--ink-3); }
+  .try button { font: .84rem var(--mono); background: none; border: 0; border-bottom: 1px dotted var(--ink-3); color: var(--ink-2); padding: 0; margin: 0 8px 4px 0; cursor: pointer; }
+  .actions { display: flex; gap: 14px; align-items: center; margin-top: 16px; }
+  .go { background: var(--ink); color: #fff; border: 0; font: inherit; font-weight: 600; padding: 12px 22px; border-radius: 3px; cursor: pointer; }
+  .go:disabled { opacity: .35; cursor: not-allowed; }
+  .link { background: none; border: 0; font: inherit; color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule-strong); cursor: pointer; }
+  .fine { margin-top: 26px; font-size: .84rem; color: var(--ink-3); border-top: 1px solid var(--rule); padding-top: 14px; }
 
-  .progress { display: none; margin-top: 20px; }
-  .steps { display: flex; gap: 8px; font-size: .88rem; color: var(--ink-3); margin-bottom: 10px; flex-wrap: wrap; }
-  .steps .on { color: var(--brand); font-weight: 700; }
-  .steps .done { color: var(--ink-2); }
-  .bar { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
-  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 60%, #7ee0bb)); transition: width .4s ease; }
-  .bar.indet > i { width: 35%; animation: slide 1.3s ease-in-out infinite; }
-  @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
-  .pmeta { display: flex; justify-content: space-between; color: var(--ink-3); font-size: .85rem; margin-top: 6px; }
+  /* the receipt: results print here line by line, which is also the progress */
+  .receipt { position: relative; background: var(--paper); border: 1px solid var(--rule); box-shadow: 0 1px 0 var(--rule), 0 18px 40px -24px rgba(40,30,20,.25); padding: 22px 22px 26px; font-family: var(--mono); font-size: .86rem; min-height: 420px; }
+  .receipt::after { content: ""; position: absolute; left: 0; right: 0; bottom: -10px; height: 10px; background: radial-gradient(circle at 6px -2px, transparent 6px, var(--paper) 6.5px) 0 0 / 12px 10px repeat-x; filter: drop-shadow(0 1px 0 var(--rule)); }
+  .r-head { text-align: center; border-bottom: 1px dashed var(--rule-strong); padding-bottom: 12px; margin-bottom: 10px; }
+  .r-head .t { font-weight: 600; letter-spacing: .18em; font-size: .8rem; }
+  .r-head .s { color: var(--ink-3); font-size: .78rem; margin-top: 2px; min-height: 1.2em; }
+  .r-status { display: flex; justify-content: space-between; color: var(--ink-3); font-size: .76rem; margin: 6px 0 10px; }
+  .r-bar { height: 3px; background: var(--rule); margin-bottom: 12px; overflow: hidden; }
+  .r-bar i { display: block; height: 100%; width: 0; background: var(--ink); transition: width .4s ease; }
+  .r-bar.wait i { width: 30%; animation: scan 1.2s ease-in-out infinite; }
+  @keyframes scan { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+  .r-cols, .r-line { display: grid; grid-template-columns: 1fr 64px 64px 104px; gap: 10px; align-items: baseline; }
+  .r-cols { color: var(--ink-3); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--rule); padding-bottom: 6px; }
+  .r-line { padding: 8px 0; border-bottom: 1px dotted var(--rule); animation: print .3s ease both; }
+  @keyframes print { from { opacity: 0; clip-path: inset(0 0 100% 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
+  .r-line .it { color: var(--ink); overflow-wrap: anywhere; }
+  .r-line .hs { display: block; color: var(--ink-3); font-size: .74rem; }
+  .r-line .n { text-align: right; font-variant-numeric: tabular-nums; }
+  .r-line .v { text-align: right; font-weight: 600; }
+  .v.ok { color: var(--money); } .v.bad { color: var(--ledger); } .v.ask { color: var(--amber); font-weight: 500; }
+  .r-line .note { grid-column: 1 / -1; color: var(--amber); font-size: .76rem; }
+  .r-empty { color: var(--ink-3); text-align: center; padding: 60px 10px; line-height: 1.8; }
+  .r-total { display: none; border-top: 2px solid var(--ink); margin-top: 12px; padding-top: 10px; }
+  .r-total .row { display: flex; justify-content: space-between; }
+  .r-total .big { font-size: 1.05rem; font-weight: 600; }
+  .r-total .big.bad { color: var(--ledger); } .r-total .big.ok { color: var(--money); }
+  .r-total .tip { color: var(--ink-3); font-family: "IBM Plex Sans", sans-serif; font-size: .82rem; margin-top: 8px; }
+  .stamp { display: none; position: absolute; right: 18px; bottom: 74px; transform: rotate(-11deg); border: 3px double var(--ledger); color: var(--ledger); font-family: var(--mono); font-weight: 600; letter-spacing: .06em; padding: 6px 12px; text-align: center; font-size: .78rem; line-height: 1.25; opacity: .88; mix-blend-mode: multiply; animation: thump .35s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .stamp b { display: block; font-size: 1.15rem; }
+  .stamp.ok { border-color: var(--money); color: var(--money); }
+  @keyframes thump { from { transform: rotate(-11deg) scale(1.7); opacity: 0; } to { transform: rotate(-11deg) scale(1); opacity: .88; } }
+  .err { display: none; color: var(--ledger); background: var(--ledger-soft); padding: 10px 12px; margin-top: 12px; font-family: "IBM Plex Sans", sans-serif; }
 
-  .summary { display: none; margin-top: 20px; border-radius: 14px; padding: 18px 20px; }
-  .summary.bad { background: var(--bad-soft); }
-  .summary.ok { background: var(--ok-soft); }
-  .summary .big { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -.02em; }
-  .summary .sub { color: var(--ink-2); margin-top: 2px; }
-  .counts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .count { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: .88rem; }
-  .meta { color: var(--ink-3); font-size: .9rem; margin-top: 14px; }
+  /* notes, set like footnotes in a ledger rather than feature cards */
+  .notes { border-top: 2px solid var(--ink); padding: 26px 16px 50px; display: grid; grid-template-columns: 220px 1fr; gap: 32px; }
+  .notes h2 { font-family: Fraunces, Georgia, serif; font-size: 1.5rem; margin: 0; letter-spacing: -.02em; }
+  .notes ol { margin: 0; padding: 0; list-style: none; counter-reset: n; display: grid; gap: 14px; }
+  .notes li { counter-increment: n; display: grid; grid-template-columns: 34px 1fr; color: var(--ink-2); }
+  .notes li::before { content: counter(n, decimal-leading-zero); font-family: var(--mono); color: var(--ledger); font-weight: 600; }
+  .notes li b { color: var(--ink); }
+  footer { color: var(--ink-3); font-size: .82rem; padding: 0 16px 40px; }
 
-  .tablewrap { overflow-x: auto; margin-top: 14px; }
-  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
-  th { text-align: left; color: var(--ink-3); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; padding: 10px 8px; border-bottom: 1px solid var(--line); }
-  td { padding: 12px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  tr.new { animation: fadein .35s ease; }
-  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .hsn { font-variant-numeric: tabular-nums; font-weight: 600; background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; padding: 1px 7px; }
-  .pill { display: inline-block; font-weight: 700; font-variant-numeric: tabular-nums; border-radius: 999px; padding: 2px 10px; font-size: .88rem; color: #fff; }
-  .r0 { background: var(--s0); } .r5 { background: var(--s5); } .r18 { background: var(--s18); } .r40 { background: var(--s40); } .rx { background: var(--s3); }
-  .v-ok { color: var(--ok); font-weight: 700; } .v-bad { color: var(--bad); font-weight: 700; } .v-ask { color: var(--warn); font-weight: 600; }
-  .entry { color: var(--ink-3); font-size: .85rem; }
-  .err { display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); }
-
-  .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 36px 0; }
-  .how .card { padding: 18px; }
-  .how b { display: block; margin-bottom: 4px; }
-  .how p { margin: 0; color: var(--ink-2); font-size: .94rem; }
-  .num { width: 28px; height: 28px; border-radius: 8px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; font-weight: 800; margin-bottom: 10px; }
-  footer { color: var(--ink-3); font-size: .85rem; padding: 10px 0 40px; }
-  @media (max-width: 760px) { .how { grid-template-columns: 1fr; } .top nav { display: none; } .hero { padding-top: 32px; } td.entry-col, th.entry-col { display: none; } }
+  @media (max-width: 880px) {
+    .grid { grid-template-columns: 1fr; gap: 32px; padding-top: 28px; }
+    .notes { grid-template-columns: 1fr; gap: 14px; }
+    .r-cols, .r-line { grid-template-columns: 1fr 50px 54px 84px; gap: 6px; }
+    .mast .meta { display: none; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
-<header class="top">
+<header class="mast">
   <div class="wrap">
-    <div class="logo"><div class="mark" aria-hidden="true">₹</div>BillSahi</div>
-    <nav><a href="#how">How it works</a><a href="https://github.com/Ankith-m1006/billsahi">GitHub</a></nav>
+    <div class="brand">Bill<em>Sahi</em></div>
+    <div class="meta">CBIC rates · Notif. 9/2025 &amp; 10/2025 · amended to 01-05-2026 · <a href="https://github.com/Ankith-m1006/billsahi">source</a></div>
   </div>
 </header>
 
-<main class="wrap">
-  <section class="hero">
-    <span class="eyebrow">Official GST rates · after GST 2.0</span>
-    <h1>Is your supplier charging<br>the right GST?</h1>
-    <p class="lead">Upload a supplier bill and see every line charged at the wrong rate, in rupees. Or type your shop's items the way you write them and get the HSN code and GST rate.</p>
-  </section>
+<main>
+  <div class="wrap grid">
+    <section>
+      <h1>Is your supplier charging <span>the right GST?</span></h1>
+      <p class="lead">Photograph a supplier's bill. BillSahi checks every line against the official GST rate and tells you, in rupees, what you were overcharged. Or type your items the way you write them and get the HSN code.</p>
 
-  <div class="tabs" role="tablist">
-    <button role="tab" aria-selected="true" data-tab="bill">Check a bill</button>
-    <button role="tab" aria-selected="false" data-tab="items">Find HSN for my items</button>
+      <div class="switch" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="bill">Check a bill</button>
+        <button role="tab" aria-selected="false" data-tab="items">HSN for my items</button>
+      </div>
+
+      <div id="tab-bill">
+        <label class="drop" id="drop">
+          <input type="file" id="photo" accept="image/*" capture="environment" hidden>
+          <b>Drop the bill photo here, or tap to choose</b>
+          <small>A clear photo of a GST tax invoice. JPG or PNG, up to 8 MB.</small>
+        </label>
+        <div class="picked" id="picked"><img id="thumb" alt="Selected bill"><span class="fn" id="fname"></span></div>
+        <div class="actions"><button class="go" id="run-bill" disabled>Check this bill</button></div>
+      </div>
+
+      <div id="tab-items" hidden>
+        <textarea id="items" aria-label="Items, one per line" placeholder="Parle G 800g&#10;Lifebuoy 125gm&#10;hawai chappal 199&#10;Sona masoori loose 25kg"></textarea>
+        <div class="try" id="try">Try: </div>
+        <div class="actions"><button class="go" id="run-items">Find HSN and GST</button><button class="link" id="clear-items">Clear</button></div>
+      </div>
+
+      <p class="fine">The model never states a rate. It picks the HSN heading and the official notification entry; the rate is read from that entry. When the rate depends on something the bill doesn't show (loose or pre-packed, above Rs 2,500), BillSahi asks instead of guessing. A helper, not tax advice.</p>
+    </section>
+
+    <section aria-live="polite">
+      <div class="receipt" id="receipt">
+        <div class="r-head"><div class="t">GST CHECK</div><div class="s" id="r-sub">Your results print here</div></div>
+        <div class="r-status"><span id="r-stage">Waiting for a bill</span><span id="r-time"></span></div>
+        <div class="r-bar" id="r-bar"><i></i></div>
+        <div class="r-cols" id="r-cols"><span>Item · HSN</span><span class="n">Charged</span><span class="n">Official</span><span class="n">Result</span></div>
+        <div id="r-lines"><div class="r-empty">Upload a bill on the left.<br>Each line appears here as it is checked.</div></div>
+        <div class="r-total" id="r-total"></div>
+        <div class="stamp" id="stamp"></div>
+        <div class="err" id="err"></div>
+      </div>
+    </section>
   </div>
 
-  <section class="card" id="tab-bill">
-    <label class="drop" id="drop">
-      <input type="file" id="photo" accept="image/*" capture="environment" hidden>
-      <strong>Drop a bill photo here, or tap to choose</strong>
-      <span>A clear photo of a GST tax invoice from your supplier. JPG or PNG, up to 8 MB.</span>
-    </label>
-    <div class="preview" id="preview"><img id="thumb" alt="Selected bill"><div><div class="name" id="fname"></div><div class="entry" id="fsize"></div></div></div>
-    <div class="row"><button class="btn" id="run-bill" disabled>Check this bill</button></div>
-
-    <div class="progress" id="bill-progress">
-      <div class="steps"><span data-step="reading">1. Reading the bill</span><span>→</span><span data-step="checking">2. Checking each line</span><span>→</span><span data-step="done">3. Done</span></div>
-      <div class="bar" id="bill-bar"><i></i></div>
-      <div class="pmeta"><span id="bill-ptext">Starting…</span><span id="bill-time"></span></div>
-    </div>
-    <div class="err" id="bill-err"></div>
-
-    <div class="summary" id="bill-summary">
-      <div class="big" id="bill-big"></div>
-      <div class="sub" id="bill-sub"></div>
-      <div class="counts" id="bill-counts"></div>
-    </div>
-    <div class="meta" id="bill-head"></div>
-    <div class="tablewrap"><table id="out-bill" hidden>
-      <thead><tr><th>Item</th><th>HSN</th><th>Charged</th><th>Official</th><th>Result</th></tr></thead><tbody></tbody>
-    </table></div>
+  <section class="wrap notes" id="how">
+    <h2>How the check works</h2>
+    <ol>
+      <li><span><b>It reads shop language.</b> Brands, abbreviations, Hinglish, Hindi or Kannada: "Parle G 800g", "ಬಟ್ಟೆ ಸೋಪು 4pc", "hawai chappal 199". Open models pick the 4-digit HSN heading.</span></li>
+      <li><span><b>It picks the entry, then reads the law.</b> One heading can hold several rates (biscuits 5%, bread 0%). The model picks the matching entry of CBIC Notification 9/2025 or 10/2025; code reads the rate from it.</span></li>
+      <li><span><b>Arithmetic stays arithmetic.</b> The Rs 2,500 line for clothes and footwear, and the rupee difference on every bill line, are calculated by code, not by a model.</span></li>
+      <li><span><b>It asks when it can't know.</b> Loose rice is exempt, pre-packed rice is 5%. If the bill doesn't say, you get a question, not a guess.</span></li>
+    </ol>
   </section>
-
-  <section class="card" id="tab-items" hidden>
-    <label class="lbl" for="items">One item per line. Brands, Hinglish, Hindi or Kannada all work.</label>
-    <textarea id="items" placeholder="Parle G 800g&#10;Lifebuoy 125gm&#10;hawai chappal 199&#10;Sona masoori loose 25kg"></textarea>
-    <div class="chips" id="chips"></div>
-    <div class="row"><button class="btn" id="run-items">Find HSN and GST</button><button class="btn ghost" id="clear-items">Clear</button></div>
-
-    <div class="progress" id="items-progress">
-      <div class="bar" id="items-bar"><i></i></div>
-      <div class="pmeta"><span id="items-ptext">Starting…</span><span id="items-time"></span></div>
-    </div>
-    <div class="err" id="items-err"></div>
-    <div class="tablewrap"><table id="out-items" hidden>
-      <thead><tr><th>Item</th><th>HSN</th><th>GST</th><th class="entry-col">Official entry</th></tr></thead><tbody></tbody>
-    </table></div>
-  </section>
-
-  <section class="how" id="how">
-    <div class="card"><div class="num">1</div><b>Reads your words</b><p>Open models read "Parle G 800g" or "ಬಟ್ಟೆ ಸೋಪು" the way shops write them, and pick the HSN heading and the matching notification entry.</p></div>
-    <div class="card"><div class="num">2</div><b>Rates come from the law</b><p>The model never states a rate. Code reads it from CBIC Notifications 9/2025 and 10/2025, with amendments up to 1 May 2026.</p></div>
-    <div class="card"><div class="num">3</div><b>Asks when it depends</b><p>Loose or pre-packed? Above Rs 2,500? When the rate depends on a fact the bill doesn't show, BillSahi asks instead of guessing.</p></div>
-  </section>
-
-  <footer>BillSahi is a helper, not tax advice. Confirm anything marked "ask" with your accountant. Open source on <a href="https://github.com/Ankith-m1006/billsahi">GitHub</a>.</footer>
+  <footer class="wrap">Open source on <a href="https://github.com/Ankith-m1006/billsahi">GitHub</a>. Confirm anything marked "ask" with your accountant.</footer>
 </main>
 
 <script>
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
   const inr = (n) => "₹" + Number(n).toLocaleString("en-IN", {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  const pill = (r) => r == null ? "—" : `<span class="pill ${({0: "r0", 5: "r5", 18: "r18", 40: "r40"})[r] || "rx"}">${r}%</span>`;
+  const pct = (r) => r == null ? "—" : r + "%";
 
-  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
-    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
-    $("#tab-bill").hidden = b.dataset.tab !== "bill";
-    $("#tab-items").hidden = b.dataset.tab !== "items";
+  let mode = "bill";
+  document.querySelectorAll(".switch button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".switch button").forEach((x) => x.setAttribute("aria-selected", x === b));
+    mode = b.dataset.tab;
+    $("#tab-bill").hidden = mode !== "bill";
+    $("#tab-items").hidden = mode !== "items";
+    resetReceipt(mode === "bill" ? "Upload a bill on the left.<br>Each line appears here as it is checked." : "Type items on the left.<br>Each one appears here with its HSN and rate.");
   }));
 
-  // Bill upload: tap or drag and drop, with a preview
+  function resetReceipt(emptyHtml) {
+    $("#r-sub").textContent = "Your results print here";
+    $("#r-stage").textContent = mode === "bill" ? "Waiting for a bill" : "Waiting for items";
+    $("#r-time").textContent = "";
+    $("#r-cols").innerHTML = mode === "bill"
+      ? '<span>Item · HSN</span><span class="n">Charged</span><span class="n">Official</span><span class="n">Result</span>'
+      : '<span>Item · HSN</span><span class="n"></span><span class="n">GST</span><span class="n"></span>';
+    $("#r-lines").innerHTML = `<div class="r-empty">${emptyHtml}</div>`;
+    $("#r-total").style.display = "none"; $("#stamp").style.display = "none"; $("#err").style.display = "none";
+    bar(0, 0);
+  }
+  function bar(done, total, waiting) {
+    $("#r-bar").classList.toggle("wait", !!waiting);
+    $("#r-bar i").style.width = waiting ? "" : (total ? Math.round(100 * done / total) : 0) + "%";
+  }
+
+  // bill upload
   const drop = $("#drop"), photo = $("#photo");
   let file = null;
   function pick(f) {
     if (!f) return;
     file = f;
     $("#thumb").src = URL.createObjectURL(f);
-    $("#fname").textContent = f.name;
-    $("#fsize").textContent = (f.size / 1024).toFixed(0) + " KB";
-    $("#preview").style.display = "flex";
+    $("#fname").textContent = f.name + " · " + (f.size / 1024).toFixed(0) + " KB";
+    $("#picked").style.display = "flex";
     $("#run-bill").disabled = false;
   }
   photo.addEventListener("change", () => pick(photo.files[0]));
@@ -208,107 +219,99 @@
 
   async function poll(id, onTick) {
     for (;;) {
-      const res = await fetch("/api/jobs/" + id);
-      const j = await res.json();
+      const j = await (await fetch("/api/jobs/" + id)).json();
       onTick(j);
       if (j.stage === "done" || j.stage === "error") return j;
       await new Promise((r) => setTimeout(r, 1200));
     }
   }
 
-  function setBar(bar, done, total, indeterminate) {
-    bar.classList.toggle("indet", !!indeterminate);
-    bar.firstElementChild.style.width = indeterminate ? "" : (total ? Math.round(100 * done / total) : 0) + "%";
+  function billResult(l) {
+    if (l.verdict === "ok") return '<span class="v ok">✓ correct</span>';
+    if (l.verdict === "overcharged") return `<span class="v bad">+${inr(l.rupees || 0)}</span>`;
+    if (l.verdict === "undercharged") return `<span class="v bad">−${inr(Math.abs(l.rupees || 0))}</span>`;
+    return '<span class="v ask">ask</span>';
   }
 
-  function verdictCell(l) {
-    if (l.verdict === "ok") return `<span class="v-ok">✓ Correct</span>`;
-    if (l.verdict === "overcharged") return `<span class="v-bad">Overcharged${l.rupees ? " " + inr(l.rupees) : ""}</span>`;
-    if (l.verdict === "undercharged") return `<span class="v-bad">Undercharged${l.rupees ? " " + inr(Math.abs(l.rupees)) : ""}</span>`;
-    if (l.ask) return `<span class="v-ask">Ask: ${esc(l.ask)}</span>`;
-    return `<span class="v-ask">Check with your accountant</span>`;
+  function addLine(html) {
+    const empty = $("#r-lines .r-empty"); if (empty) empty.remove();
+    $("#r-lines").insertAdjacentHTML("beforeend", html);
   }
 
   $("#run-bill").addEventListener("click", async () => {
     if (!file) return;
     const btn = $("#run-bill"); btn.disabled = true;
-    $("#bill-err").style.display = "none"; $("#bill-summary").style.display = "none";
-    $("#out-bill").hidden = true; $("#out-bill tbody").innerHTML = ""; $("#bill-head").textContent = "";
-    $("#bill-progress").style.display = "block";
+    resetReceipt("Reading the bill…");
     const shown = new Set();
     try {
       const fd = new FormData(); fd.append("photo", file);
       const start = await (await fetch("/api/jobs/bill", {method: "POST", body: fd})).json();
-      if (!start.id) throw new Error(start.detail || "Could not start.");
+      if (!start.id) throw new Error(start.detail || "Could not start the check.");
       const j = await poll(start.id, (s) => {
-        document.querySelectorAll("#bill-progress [data-step]").forEach((el) => {
-          const order = ["reading", "checking", "done"];
-          el.className = el.dataset.step === s.stage ? "on" : (order.indexOf(el.dataset.step) < order.indexOf(s.stage) ? "done" : "");
-        });
-        $("#bill-time").textContent = s.elapsed + " s";
-        if (s.stage === "reading" || s.stage === "queued") { setBar($("#bill-bar"), 0, 0, true); $("#bill-ptext").textContent = "Reading the bill photo…"; }
-        if (s.stage === "checking") { setBar($("#bill-bar"), s.done, s.total); $("#bill-ptext").textContent = `Checked ${s.done} of ${s.total} lines`; }
-        if (s.meta) $("#bill-head").textContent = [s.meta.supplier, s.meta.invoice_no, s.meta.invoice_date].filter(Boolean).join(" · ");
+        $("#r-time").textContent = s.elapsed + " s";
+        if (s.stage === "queued" || s.stage === "reading") { bar(0, 0, true); $("#r-stage").textContent = "Reading the bill photo"; }
+        if (s.stage === "checking") { bar(s.done, s.total); $("#r-stage").textContent = `Checked ${s.done} of ${s.total} lines`; }
+        if (s.meta) $("#r-sub").textContent = [s.meta.supplier, s.meta.invoice_no, s.meta.invoice_date].filter(Boolean).join(" · ");
         (s.rows || []).forEach((l) => {
-          const key = l.item + "|" + l.taxable_value;
-          if (shown.has(key)) return; shown.add(key);
-          $("#out-bill").hidden = false;
-          $("#out-bill tbody").insertAdjacentHTML("beforeend", `<tr class="new"><td>${esc(l.item)}</td><td>${l.heading ? `<span class="hsn">${l.heading}</span>` : "—"}</td><td>${pill(l.charged_pct)}</td><td>${pill(l.official_pct)}</td><td>${verdictCell(l)}</td></tr>`);
+          const key = l.item + "|" + l.taxable_value; if (shown.has(key)) return; shown.add(key);
+          addLine(`<div class="r-line"><span class="it">${esc(l.item)}<span class="hs">HSN ${esc(l.heading || "—")}${l.printed_hsn && l.heading && !l.hsn_matches ? " · bill says " + esc(l.printed_hsn) : ""}</span></span><span class="n">${pct(l.charged_pct)}</span><span class="n">${pct(l.official_pct)}</span>${billResult(l)}${l.ask ? `<span class="note">${esc(l.ask)}</span>` : ""}</div>`);
         });
       });
       if (j.stage === "error") throw new Error(j.error);
-      setBar($("#bill-bar"), 1, 1); $("#bill-ptext").textContent = `All ${j.result.lines.length} lines checked`;
-      const lines = j.result.lines;
-      const c = (v) => lines.filter((l) => l.verdict === v).length;
-      const asks = lines.filter((l) => l.verdict === "check").length;
-      const s = $("#bill-summary");
-      s.className = "summary " + (j.result.overcharged_rupees > 0 ? "bad" : "ok"); s.style.display = "block";
-      $("#bill-big").textContent = j.result.overcharged_rupees > 0 ? inr(j.result.overcharged_rupees) + " extra GST on this bill" : "No overcharged lines found";
-      $("#bill-sub").textContent = j.result.overcharged_rupees > 0 ? "Ask your supplier for a corrected invoice or a credit note for these lines." : "Every line we could check matches the official rate.";
-      $("#bill-counts").innerHTML = `<span class="count">✓ ${c("ok")} correct</span><span class="count">${c("overcharged")} overcharged</span><span class="count">${c("undercharged")} undercharged</span><span class="count">${asks} to confirm</span>`;
+      bar(1, 1);
+      const lines = j.result.lines, over = j.result.overcharged_rupees;
+      const n = (v) => lines.filter((l) => l.verdict === v).length;
+      $("#r-stage").textContent = `All ${lines.length} lines checked`;
+      $("#r-total").innerHTML = `<div class="row big ${over > 0 ? "bad" : "ok"}"><span>Extra GST charged</span><span>${inr(over)}</span></div>
+        <div class="row"><span>${n("ok")} correct · ${n("overcharged")} overcharged · ${n("undercharged")} under · ${n("check")} to confirm</span></div>
+        <div class="tip">${over > 0 ? "Ask the supplier for a corrected invoice or a credit note for the marked lines." : "Every line we could check matches the official rate."}</div>`;
+      $("#r-total").style.display = "block";
+      const st = $("#stamp");
+      st.className = "stamp" + (over > 0 ? "" : " ok");
+      st.innerHTML = over > 0 ? `<b>${inr(over)}</b>EXTRA GST` : "<b>✓</b>RATES OK";
+      st.style.display = "block";
     } catch (e) {
-      $("#bill-err").textContent = "Something went wrong: " + e.message; $("#bill-err").style.display = "block";
+      $("#err").textContent = "Something went wrong: " + e.message; $("#err").style.display = "block";
     } finally { btn.disabled = false; }
   });
 
-  // Items
-  const examples = ["Parle G 800g", "Lifebuoy 125gm", "hawai chappal 199", "Sona masoori loose 25kg", "Amul ghee 1L", "Fevicol 100g", "ಬಟ್ಟೆ ಸೋಪು 4pc", "cotton shirt 899"];
-  $("#chips").innerHTML = examples.map((e) => `<button class="chip" type="button">${esc(e)}</button>`).join("");
-  $("#chips").addEventListener("click", (ev) => {
-    if (!ev.target.classList.contains("chip")) return;
+  // items
+  const examples = ["Parle G 800g", "Lifebuoy 125gm", "hawai chappal 199", "Sona masoori loose 25kg", "Amul ghee 1L", "ಬಟ್ಟೆ ಸೋಪು 4pc", "cotton shirt 899"];
+  $("#try").insertAdjacentHTML("beforeend", examples.map((e) => `<button type="button">${esc(e)}</button>`).join(""));
+  $("#try").addEventListener("click", (ev) => {
+    if (ev.target.tagName !== "BUTTON") return;
     const t = $("#items"); t.value = (t.value.trim() ? t.value.trim() + "\n" : "") + ev.target.textContent;
   });
-  $("#clear-items").addEventListener("click", () => { $("#items").value = ""; $("#out-items").hidden = true; $("#items-progress").style.display = "none"; });
+  $("#clear-items").addEventListener("click", () => { $("#items").value = ""; resetReceipt("Type items on the left.<br>Each one appears here with its HSN and rate."); });
 
-  function rateCell(r) {
-    if (r.status === "certain") return pill(r.rate);
-    if (r.status === "ask") return `<span class="v-ask">Ask: ${esc(r.ask)}</span>`;
-    return `<span class="v-ask">Check with your accountant</span>`;
+  function itemRate(r) {
+    if (r.status === "certain") return `<span class="v ok">${pct(r.rate)}</span>`;
+    return '<span class="v ask">ask</span>';
   }
 
   $("#run-items").addEventListener("click", async () => {
     const items = $("#items").value.split("\n").map((s) => s.trim()).filter(Boolean);
     if (!items.length) return;
     const btn = $("#run-items"); btn.disabled = true;
-    $("#items-err").style.display = "none"; $("#out-items tbody").innerHTML = ""; $("#out-items").hidden = true;
-    $("#items-progress").style.display = "block"; setBar($("#items-bar"), 0, items.length);
+    resetReceipt("Checking…");
     const shown = new Set();
     try {
       const start = await (await fetch("/api/jobs/classify", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({items})})).json();
-      if (!start.id) throw new Error(start.detail || "Could not start.");
+      if (!start.id) throw new Error(start.detail || "Could not start the check.");
+      $("#r-sub").textContent = items.length + " items";
       const j = await poll(start.id, (s) => {
-        setBar($("#items-bar"), s.done, s.total);
-        $("#items-ptext").textContent = `Checked ${s.done} of ${s.total} items`;
-        $("#items-time").textContent = s.elapsed + " s";
+        bar(s.done, s.total);
+        $("#r-stage").textContent = `Checked ${s.done} of ${s.total} items`;
+        $("#r-time").textContent = s.elapsed + " s";
         (s.rows || []).forEach((r) => {
           if (shown.has(r.item)) return; shown.add(r.item);
-          $("#out-items").hidden = false;
-          $("#out-items tbody").insertAdjacentHTML("beforeend", `<tr class="new"><td>${esc(r.item)}</td><td>${r.heading ? `<span class="hsn">${r.heading}</span>` : "—"}</td><td>${rateCell(r)}</td><td class="entry entry-col">${esc(r.entry_text || "")}</td></tr>`);
+          addLine(`<div class="r-line"><span class="it">${esc(r.item)}<span class="hs">HSN ${esc(r.heading || "—")}${r.entry_text ? " · " + esc(r.entry_text.slice(0, 70)) + (r.entry_text.length > 70 ? "…" : "") : ""}</span></span><span class="n"></span><span class="n"></span>${itemRate(r)}${r.ask ? `<span class="note">${esc(r.ask)}</span>` : ""}</div>`);
         });
       });
       if (j.stage === "error") throw new Error(j.error);
+      $("#r-stage").textContent = `All ${items.length} items checked`;
     } catch (e) {
-      $("#items-err").textContent = "Something went wrong: " + e.message; $("#items-err").style.display = "block";
+      $("#err").textContent = "Something went wrong: " + e.message; $("#err").style.display = "block";
     } finally { btn.disabled = false; }
   });
 </script>
