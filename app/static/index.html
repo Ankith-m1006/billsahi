@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BillSahi</title>
+<style>
+  :root { --bg:#f7f5f0; --card:#fff; --ink:#1d1b16; --dim:#6b665c; --line:#e3ded3; --accent:#0f6b4f; --warn:#b4540a; --bad:#b3261e; --chip:#eef4f1; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14130f; --card:#1f1d18; --ink:#f1ede4; --dim:#a39d90; --line:#36322a; --accent:#5cc49a; --warn:#f0a35c; --bad:#ff8a80; --chip:#1d2b25; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--dim); margin: 0 0 20px; }
+  .tabs { display:flex; gap:8px; margin-bottom:12px; }
+  .tabs button { border:1px solid var(--line); background:var(--card); color:var(--ink); padding:8px 14px; border-radius:8px; cursor:pointer; font:inherit; }
+  .tabs button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  textarea { width:100%; min-height:150px; font:inherit; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); }
+  .go { margin-top:10px; background:var(--accent); color:#fff; border:0; padding:10px 18px; border-radius:8px; font:inherit; font-weight:600; cursor:pointer; }
+  .go:disabled { opacity:.5; cursor:wait; }
+  table { width:100%; border-collapse:collapse; margin-top:16px; font-size:.95rem; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--dim); font-weight:600; font-size:.85rem; }
+  .rate { font-weight:700; font-variant-numeric: tabular-nums; }
+  .chip { display:inline-block; padding:2px 8px; border-radius:999px; background:var(--chip); font-size:.8rem; }
+  .ask { color: var(--warn); }
+  .bad { color: var(--bad); font-weight:600; }
+  .ok { color: var(--accent); }
+  .note { color: var(--dim); font-size:.85rem; margin-top:12px; }
+  .total { margin-top:12px; font-size:1.1rem; }
+  .wrap { overflow-x:auto; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>BillSahi</h1>
+  <p class="sub">Type your shop's items the way you write them. Get the HSN code and the GST rate from the official notification. Or upload a supplier bill and see which lines charge the wrong rate.</p>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="items">Item list</button>
+    <button role="tab" aria-selected="false" data-tab="bill">Check a bill</button>
+  </div>
+
+  <section class="card" id="tab-items">
+    <label for="items">One item per line (Hinglish, Hindi or Kannada are fine)</label>
+    <textarea id="items" placeholder="Parle G 800g&#10;Lifebuoy 125gm&#10;hawai chappal 199&#10;Sona masoori loose 25kg"></textarea>
+    <button class="go" id="run-items">Find HSN and GST</button>
+    <div class="wrap"><table id="out-items" hidden>
+      <thead><tr><th>Item</th><th>HSN</th><th>GST</th><th>Official entry</th></tr></thead><tbody></tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="tab-bill" hidden>
+    <label for="photo">Photo of a supplier's GST bill</label><br>
+    <input type="file" id="photo" accept="image/*" capture="environment">
+    <button class="go" id="run-bill">Check this bill</button>
+    <div id="bill-head" class="note"></div>
+    <div class="wrap"><table id="out-bill" hidden>
+      <thead><tr><th>Item</th><th>Charged</th><th>Official</th><th>Verdict</th></tr></thead><tbody></tbody>
+    </table></div>
+    <div class="total" id="bill-total"></div>
+  </section>
+
+  <p class="note">The model only picks the code. The rate is read from the official CBIC notifications (9/2025 and 10/2025 with amendments to 1 May 2026). When the rate depends on something the item name doesn't say, it asks instead of guessing. Confirm anything marked "ask" with your accountant.</p>
+</main>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+    $("#tab-items").hidden = b.dataset.tab !== "items";
+    $("#tab-bill").hidden = b.dataset.tab !== "bill";
+  }));
+
+  function rateCell(r) {
+    if (r.status === "certain") return `<span class="rate">${r.rate}%</span>`;
+    if (r.status === "ask") return `<span class="ask">Ask: ${esc(r.ask)}</span>`;
+    return `<span class="ask">Check with your accountant</span>`;
+  }
+
+  $("#run-items").addEventListener("click", async () => {
+    const items = $("#items").value.split("\n").map((s) => s.trim()).filter(Boolean);
+    if (!items.length) return;
+    const btn = $("#run-items"); btn.disabled = true; btn.textContent = "Working…";
+    try {
+      const res = await fetch("/api/classify", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({items})});
+      const data = await res.json();
+      const tb = $("#out-items tbody"); tb.innerHTML = "";
+      for (const r of data.rows || []) {
+        tb.insertAdjacentHTML("beforeend", `<tr><td>${esc(r.item)}</td><td>${r.heading ? `<span class="chip">${r.heading}</span>` : "—"}</td><td>${rateCell(r)}</td><td>${esc(r.entry_text || "")}</td></tr>`);
+      }
+      $("#out-items").hidden = false;
+    } finally { btn.disabled = false; btn.textContent = "Find HSN and GST"; }
+  });
+
+  $("#run-bill").addEventListener("click", async () => {
+    const f = $("#photo").files[0];
+    if (!f) return;
+    const btn = $("#run-bill"); btn.disabled = true; btn.textContent = "Reading the bill…";
+    try {
+      const fd = new FormData(); fd.append("photo", f);
+      const res = await fetch("/api/bill", {method: "POST", body: fd});
+      const d = await res.json();
+      $("#bill-head").textContent = [d.supplier, d.invoice_no, d.invoice_date].filter(Boolean).join(" · ");
+      const tb = $("#out-bill tbody"); tb.innerHTML = "";
+      for (const l of d.lines || []) {
+        const v = l.verdict === "ok" ? `<span class="ok">Correct</span>`
+          : l.verdict === "overcharged" ? `<span class="bad">Overcharged${l.rupees ? ` ₹${l.rupees}` : ""}</span>`
+          : l.verdict === "undercharged" ? `<span class="bad">Undercharged${l.rupees ? ` ₹${Math.abs(l.rupees)}` : ""}</span>`
+          : (l.ask ? `<span class="ask">Ask: ${esc(l.ask)}</span>` : `<span class="ask">Check</span>`);
+        tb.insertAdjacentHTML("beforeend", `<tr><td>${esc(l.item)}</td><td>${l.charged_pct ?? "—"}%</td><td>${l.official_pct != null ? l.official_pct + "%" : "—"}</td><td>${v}</td></tr>`);
+      }
+      $("#out-bill").hidden = false;
+      $("#bill-total").innerHTML = d.overcharged_rupees > 0 ? `<span class="bad">Extra GST charged on this bill: ₹${d.overcharged_rupees}</span>` : "";
+    } finally { btn.disabled = false; btn.textContent = "Check this bill"; }
+  });
+</script>
+</body>
+</html>
