@@ -1,0 +1,13 @@
+{
+  "run": "trial1",
+  "base": "Qwen/Qwen3.5-4B",
+  "rank": 32,
+  "epochs": 1.0,
+  "batch": 64,
+  "steps": 10,
+  "lr": 0.0004905250962784578,
+  "train_examples": 640,
+  "sampler_path": "tinker://5327eb7d-eddf-5723-8048-6baf9aa45d19:train:0/sampler_weights/trial1-final",
+  "state_path": "tinker://5327eb7d-eddf-5723-8048-6baf9aa45d19:train:0/weights/trial1-state",
+  "minutes": 1.1
+}

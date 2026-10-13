@@ -1,0 +1,7 @@
+fastapi==0.143.0
+uvicorn[standard]
+python-multipart
+psycopg[binary]
+sentry-sdk==2.72.0
+tinker==0.33.1
+tinker-cookbook==0.5.7
