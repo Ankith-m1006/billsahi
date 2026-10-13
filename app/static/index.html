@@ -4,117 +4,312 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BillSahi</title>
+<meta name="description" content="Check every supplier bill for the wrong GST rate, and find the right HSN code for your shop's items, from the official CBIC notifications.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#f7f5f0; --card:#fff; --ink:#1d1b16; --dim:#6b665c; --line:#e3ded3; --accent:#0f6b4f; --warn:#b4540a; --bad:#b3261e; --chip:#eef4f1; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#14130f; --card:#1f1d18; --ink:#f1ede4; --dim:#a39d90; --line:#36322a; --accent:#5cc49a; --warn:#f0a35c; --bad:#ff8a80; --chip:#1d2b25; } }
+  :root {
+    --bg: #f6f7f5; --surface: #ffffff; --surface-2: #f0f3ef; --ink: #14201b; --ink-2: #4c5a53; --ink-3: #7c8a83;
+    --line: #e1e7e2; --brand: #0b7a5a; --brand-ink: #ffffff; --brand-soft: #e3f4ec;
+    --ok: #13805b; --ok-soft: #e4f5ec; --bad: #c2341f; --bad-soft: #fdecea; --warn: #a75a00; --warn-soft: #fff3e0;
+    --s0: #6b7280; --s5: #13805b; --s18: #2457c5; --s40: #b42318; --s3: #7a4cc2;
+    --radius: 16px; --shadow: 0 1px 2px rgba(16,24,20,.05), 0 8px 24px rgba(16,24,20,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1412; --surface: #151d1a; --surface-2: #1b2521; --ink: #eaf1ed; --ink-2: #aab8b1; --ink-3: #7f8e87;
+      --line: #26322d; --brand: #3ccf98; --brand-ink: #062419; --brand-soft: #123327;
+      --ok: #48d39c; --ok-soft: #10301f; --bad: #ff7b6b; --bad-soft: #3a1611; --warn: #ffb547; --warn-soft: #3a2a0d;
+      --s0: #9aa4ae; --s5: #48d39c; --s18: #7aa7ff; --s40: #ff8a7d; --s3: #b796ff;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
-  h1 { font-size: 1.6rem; margin: 0 0 4px; }
-  .sub { color: var(--dim); margin: 0 0 20px; }
-  .tabs { display:flex; gap:8px; margin-bottom:12px; }
-  .tabs button { border:1px solid var(--line); background:var(--card); color:var(--ink); padding:8px 14px; border-radius:8px; cursor:pointer; font:inherit; }
-  .tabs button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
-  textarea { width:100%; min-height:150px; font:inherit; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); }
-  .go { margin-top:10px; background:var(--accent); color:#fff; border:0; padding:10px 18px; border-radius:8px; font:inherit; font-weight:600; cursor:pointer; }
-  .go:disabled { opacity:.5; cursor:wait; }
-  table { width:100%; border-collapse:collapse; margin-top:16px; font-size:.95rem; }
-  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
-  th { color:var(--dim); font-weight:600; font-size:.85rem; }
-  .rate { font-weight:700; font-variant-numeric: tabular-nums; }
-  .chip { display:inline-block; padding:2px 8px; border-radius:999px; background:var(--chip); font-size:.8rem; }
-  .ask { color: var(--warn); }
-  .bad { color: var(--bad); font-weight:600; }
-  .ok { color: var(--accent); }
-  .note { color: var(--dim); font-size:.85rem; margin-top:12px; }
-  .total { margin-top:12px; font-size:1.1rem; }
-  .wrap { overflow-x:auto; }
-  [hidden] { display:none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 16px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--brand); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+  header.top { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(10px); background: color-mix(in srgb, var(--bg) 82%, transparent); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; letter-spacing: -.01em; }
+  .mark { width: 32px; height: 32px; border-radius: 9px; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font-weight: 800; }
+  .top nav a { color: var(--ink-2); text-decoration: none; font-size: .92rem; margin-left: 18px; }
+
+  .hero { padding: 48px 0 24px; }
+  .eyebrow { display: inline-block; font-size: .8rem; font-weight: 600; color: var(--brand); background: var(--brand-soft); padding: 4px 10px; border-radius: 999px; }
+  h1 { font-size: clamp(1.9rem, 4.6vw, 3rem); line-height: 1.1; letter-spacing: -.025em; margin: 14px 0 12px; font-weight: 800; }
+  .lead { font-size: 1.1rem; color: var(--ink-2); max-width: 640px; margin: 0; }
+
+  .tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; margin: 28px 0 16px; }
+  .tabs button { border: 0; background: transparent; color: var(--ink-2); font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 9px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; }
+  .drop { border: 2px dashed var(--line); border-radius: 14px; padding: 28px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; display: block; }
+  .drop:hover, .drop.over { border-color: var(--brand); background: var(--brand-soft); }
+  .drop strong { display: block; font-size: 1.05rem; margin-bottom: 4px; }
+  .drop span { color: var(--ink-3); font-size: .92rem; }
+  .preview { display: none; gap: 14px; align-items: center; margin-top: 14px; }
+  .preview img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+  .preview .name { font-weight: 600; word-break: break-all; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+  .btn { background: var(--brand); color: var(--brand-ink); border: 0; font: inherit; font-weight: 700; padding: 12px 20px; border-radius: 11px; cursor: pointer; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line); font-weight: 600; }
+  textarea { width: 100%; min-height: 160px; font: inherit; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--ink); resize: vertical; }
+  label.lbl { display: block; font-weight: 600; margin-bottom: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 4px 10px; font-size: .85rem; cursor: pointer; }
+
+  .progress { display: none; margin-top: 20px; }
+  .steps { display: flex; gap: 8px; font-size: .88rem; color: var(--ink-3); margin-bottom: 10px; flex-wrap: wrap; }
+  .steps .on { color: var(--brand); font-weight: 700; }
+  .steps .done { color: var(--ink-2); }
+  .bar { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 60%, #7ee0bb)); transition: width .4s ease; }
+  .bar.indet > i { width: 35%; animation: slide 1.3s ease-in-out infinite; }
+  @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+  .pmeta { display: flex; justify-content: space-between; color: var(--ink-3); font-size: .85rem; margin-top: 6px; }
+
+  .summary { display: none; margin-top: 20px; border-radius: 14px; padding: 18px 20px; }
+  .summary.bad { background: var(--bad-soft); }
+  .summary.ok { background: var(--ok-soft); }
+  .summary .big { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -.02em; }
+  .summary .sub { color: var(--ink-2); margin-top: 2px; }
+  .counts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .count { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: .88rem; }
+  .meta { color: var(--ink-3); font-size: .9rem; margin-top: 14px; }
+
+  .tablewrap { overflow-x: auto; margin-top: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th { text-align: left; color: var(--ink-3); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 12px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr.new { animation: fadein .35s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .hsn { font-variant-numeric: tabular-nums; font-weight: 600; background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; padding: 1px 7px; }
+  .pill { display: inline-block; font-weight: 700; font-variant-numeric: tabular-nums; border-radius: 999px; padding: 2px 10px; font-size: .88rem; color: #fff; }
+  .r0 { background: var(--s0); } .r5 { background: var(--s5); } .r18 { background: var(--s18); } .r40 { background: var(--s40); } .rx { background: var(--s3); }
+  .v-ok { color: var(--ok); font-weight: 700; } .v-bad { color: var(--bad); font-weight: 700; } .v-ask { color: var(--warn); font-weight: 600; }
+  .entry { color: var(--ink-3); font-size: .85rem; }
+  .err { display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); }
+
+  .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 36px 0; }
+  .how .card { padding: 18px; }
+  .how b { display: block; margin-bottom: 4px; }
+  .how p { margin: 0; color: var(--ink-2); font-size: .94rem; }
+  .num { width: 28px; height: 28px; border-radius: 8px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; font-weight: 800; margin-bottom: 10px; }
+  footer { color: var(--ink-3); font-size: .85rem; padding: 10px 0 40px; }
+  @media (max-width: 760px) { .how { grid-template-columns: 1fr; } .top nav { display: none; } .hero { padding-top: 32px; } td.entry-col, th.entry-col { display: none; } }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
-<main>
-  <h1>BillSahi</h1>
-  <p class="sub">Type your shop's items the way you write them. Get the HSN code and the GST rate from the official notification. Or upload a supplier bill and see which lines charge the wrong rate.</p>
+<header class="top">
+  <div class="wrap">
+    <div class="logo"><div class="mark" aria-hidden="true">₹</div>BillSahi</div>
+    <nav><a href="#how">How it works</a><a href="https://github.com/Ankith-m1006/billsahi">GitHub</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Official GST rates · after GST 2.0</span>
+    <h1>Is your supplier charging<br>the right GST?</h1>
+    <p class="lead">Upload a supplier bill and see every line charged at the wrong rate, in rupees. Or type your shop's items the way you write them and get the HSN code and GST rate.</p>
+  </section>
 
   <div class="tabs" role="tablist">
-    <button role="tab" aria-selected="true" data-tab="items">Item list</button>
-    <button role="tab" aria-selected="false" data-tab="bill">Check a bill</button>
+    <button role="tab" aria-selected="true" data-tab="bill">Check a bill</button>
+    <button role="tab" aria-selected="false" data-tab="items">Find HSN for my items</button>
   </div>
 
-  <section class="card" id="tab-items">
-    <label for="items">One item per line (Hinglish, Hindi or Kannada are fine)</label>
+  <section class="card" id="tab-bill">
+    <label class="drop" id="drop">
+      <input type="file" id="photo" accept="image/*" capture="environment" hidden>
+      <strong>Drop a bill photo here, or tap to choose</strong>
+      <span>A clear photo of a GST tax invoice from your supplier. JPG or PNG, up to 8 MB.</span>
+    </label>
+    <div class="preview" id="preview"><img id="thumb" alt="Selected bill"><div><div class="name" id="fname"></div><div class="entry" id="fsize"></div></div></div>
+    <div class="row"><button class="btn" id="run-bill" disabled>Check this bill</button></div>
+
+    <div class="progress" id="bill-progress">
+      <div class="steps"><span data-step="reading">1. Reading the bill</span><span>→</span><span data-step="checking">2. Checking each line</span><span>→</span><span data-step="done">3. Done</span></div>
+      <div class="bar" id="bill-bar"><i></i></div>
+      <div class="pmeta"><span id="bill-ptext">Starting…</span><span id="bill-time"></span></div>
+    </div>
+    <div class="err" id="bill-err"></div>
+
+    <div class="summary" id="bill-summary">
+      <div class="big" id="bill-big"></div>
+      <div class="sub" id="bill-sub"></div>
+      <div class="counts" id="bill-counts"></div>
+    </div>
+    <div class="meta" id="bill-head"></div>
+    <div class="tablewrap"><table id="out-bill" hidden>
+      <thead><tr><th>Item</th><th>HSN</th><th>Charged</th><th>Official</th><th>Result</th></tr></thead><tbody></tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="tab-items" hidden>
+    <label class="lbl" for="items">One item per line. Brands, Hinglish, Hindi or Kannada all work.</label>
     <textarea id="items" placeholder="Parle G 800g&#10;Lifebuoy 125gm&#10;hawai chappal 199&#10;Sona masoori loose 25kg"></textarea>
-    <button class="go" id="run-items">Find HSN and GST</button>
-    <div class="wrap"><table id="out-items" hidden>
-      <thead><tr><th>Item</th><th>HSN</th><th>GST</th><th>Official entry</th></tr></thead><tbody></tbody>
+    <div class="chips" id="chips"></div>
+    <div class="row"><button class="btn" id="run-items">Find HSN and GST</button><button class="btn ghost" id="clear-items">Clear</button></div>
+
+    <div class="progress" id="items-progress">
+      <div class="bar" id="items-bar"><i></i></div>
+      <div class="pmeta"><span id="items-ptext">Starting…</span><span id="items-time"></span></div>
+    </div>
+    <div class="err" id="items-err"></div>
+    <div class="tablewrap"><table id="out-items" hidden>
+      <thead><tr><th>Item</th><th>HSN</th><th>GST</th><th class="entry-col">Official entry</th></tr></thead><tbody></tbody>
     </table></div>
   </section>
 
-  <section class="card" id="tab-bill" hidden>
-    <label for="photo">Photo of a supplier's GST bill</label><br>
-    <input type="file" id="photo" accept="image/*" capture="environment">
-    <button class="go" id="run-bill">Check this bill</button>
-    <div id="bill-head" class="note"></div>
-    <div class="wrap"><table id="out-bill" hidden>
-      <thead><tr><th>Item</th><th>Charged</th><th>Official</th><th>Verdict</th></tr></thead><tbody></tbody>
-    </table></div>
-    <div class="total" id="bill-total"></div>
+  <section class="how" id="how">
+    <div class="card"><div class="num">1</div><b>Reads your words</b><p>Open models read "Parle G 800g" or "ಬಟ್ಟೆ ಸೋಪು" the way shops write them, and pick the HSN heading and the matching notification entry.</p></div>
+    <div class="card"><div class="num">2</div><b>Rates come from the law</b><p>The model never states a rate. Code reads it from CBIC Notifications 9/2025 and 10/2025, with amendments up to 1 May 2026.</p></div>
+    <div class="card"><div class="num">3</div><b>Asks when it depends</b><p>Loose or pre-packed? Above Rs 2,500? When the rate depends on a fact the bill doesn't show, BillSahi asks instead of guessing.</p></div>
   </section>
 
-  <p class="note">The model only picks the code. The rate is read from the official CBIC notifications (9/2025 and 10/2025 with amendments to 1 May 2026). When the rate depends on something the item name doesn't say, it asks instead of guessing. Confirm anything marked "ask" with your accountant.</p>
+  <footer>BillSahi is a helper, not tax advice. Confirm anything marked "ask" with your accountant. Open source on <a href="https://github.com/Ankith-m1006/billsahi">GitHub</a>.</footer>
 </main>
+
 <script>
   const $ = (s) => document.querySelector(s);
-  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+  const inr = (n) => "₹" + Number(n).toLocaleString("en-IN", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const pill = (r) => r == null ? "—" : `<span class="pill ${({0: "r0", 5: "r5", 18: "r18", 40: "r40"})[r] || "rx"}">${r}%</span>`;
+
   document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
-    $("#tab-items").hidden = b.dataset.tab !== "items";
     $("#tab-bill").hidden = b.dataset.tab !== "bill";
+    $("#tab-items").hidden = b.dataset.tab !== "items";
   }));
 
+  // Bill upload: tap or drag and drop, with a preview
+  const drop = $("#drop"), photo = $("#photo");
+  let file = null;
+  function pick(f) {
+    if (!f) return;
+    file = f;
+    $("#thumb").src = URL.createObjectURL(f);
+    $("#fname").textContent = f.name;
+    $("#fsize").textContent = (f.size / 1024).toFixed(0) + " KB";
+    $("#preview").style.display = "flex";
+    $("#run-bill").disabled = false;
+  }
+  photo.addEventListener("change", () => pick(photo.files[0]));
+  ["dragenter", "dragover"].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", (ev) => pick(ev.dataTransfer.files[0]));
+
+  async function poll(id, onTick) {
+    for (;;) {
+      const res = await fetch("/api/jobs/" + id);
+      const j = await res.json();
+      onTick(j);
+      if (j.stage === "done" || j.stage === "error") return j;
+      await new Promise((r) => setTimeout(r, 1200));
+    }
+  }
+
+  function setBar(bar, done, total, indeterminate) {
+    bar.classList.toggle("indet", !!indeterminate);
+    bar.firstElementChild.style.width = indeterminate ? "" : (total ? Math.round(100 * done / total) : 0) + "%";
+  }
+
+  function verdictCell(l) {
+    if (l.verdict === "ok") return `<span class="v-ok">✓ Correct</span>`;
+    if (l.verdict === "overcharged") return `<span class="v-bad">Overcharged${l.rupees ? " " + inr(l.rupees) : ""}</span>`;
+    if (l.verdict === "undercharged") return `<span class="v-bad">Undercharged${l.rupees ? " " + inr(Math.abs(l.rupees)) : ""}</span>`;
+    if (l.ask) return `<span class="v-ask">Ask: ${esc(l.ask)}</span>`;
+    return `<span class="v-ask">Check with your accountant</span>`;
+  }
+
+  $("#run-bill").addEventListener("click", async () => {
+    if (!file) return;
+    const btn = $("#run-bill"); btn.disabled = true;
+    $("#bill-err").style.display = "none"; $("#bill-summary").style.display = "none";
+    $("#out-bill").hidden = true; $("#out-bill tbody").innerHTML = ""; $("#bill-head").textContent = "";
+    $("#bill-progress").style.display = "block";
+    const shown = new Set();
+    try {
+      const fd = new FormData(); fd.append("photo", file);
+      const start = await (await fetch("/api/jobs/bill", {method: "POST", body: fd})).json();
+      if (!start.id) throw new Error(start.detail || "Could not start.");
+      const j = await poll(start.id, (s) => {
+        document.querySelectorAll("#bill-progress [data-step]").forEach((el) => {
+          const order = ["reading", "checking", "done"];
+          el.className = el.dataset.step === s.stage ? "on" : (order.indexOf(el.dataset.step) < order.indexOf(s.stage) ? "done" : "");
+        });
+        $("#bill-time").textContent = s.elapsed + " s";
+        if (s.stage === "reading" || s.stage === "queued") { setBar($("#bill-bar"), 0, 0, true); $("#bill-ptext").textContent = "Reading the bill photo…"; }
+        if (s.stage === "checking") { setBar($("#bill-bar"), s.done, s.total); $("#bill-ptext").textContent = `Checked ${s.done} of ${s.total} lines`; }
+        if (s.meta) $("#bill-head").textContent = [s.meta.supplier, s.meta.invoice_no, s.meta.invoice_date].filter(Boolean).join(" · ");
+        (s.rows || []).forEach((l) => {
+          const key = l.item + "|" + l.taxable_value;
+          if (shown.has(key)) return; shown.add(key);
+          $("#out-bill").hidden = false;
+          $("#out-bill tbody").insertAdjacentHTML("beforeend", `<tr class="new"><td>${esc(l.item)}</td><td>${l.heading ? `<span class="hsn">${l.heading}</span>` : "—"}</td><td>${pill(l.charged_pct)}</td><td>${pill(l.official_pct)}</td><td>${verdictCell(l)}</td></tr>`);
+        });
+      });
+      if (j.stage === "error") throw new Error(j.error);
+      setBar($("#bill-bar"), 1, 1); $("#bill-ptext").textContent = `All ${j.result.lines.length} lines checked`;
+      const lines = j.result.lines;
+      const c = (v) => lines.filter((l) => l.verdict === v).length;
+      const asks = lines.filter((l) => l.verdict === "check").length;
+      const s = $("#bill-summary");
+      s.className = "summary " + (j.result.overcharged_rupees > 0 ? "bad" : "ok"); s.style.display = "block";
+      $("#bill-big").textContent = j.result.overcharged_rupees > 0 ? inr(j.result.overcharged_rupees) + " extra GST on this bill" : "No overcharged lines found";
+      $("#bill-sub").textContent = j.result.overcharged_rupees > 0 ? "Ask your supplier for a corrected invoice or a credit note for these lines." : "Every line we could check matches the official rate.";
+      $("#bill-counts").innerHTML = `<span class="count">✓ ${c("ok")} correct</span><span class="count">${c("overcharged")} overcharged</span><span class="count">${c("undercharged")} undercharged</span><span class="count">${asks} to confirm</span>`;
+    } catch (e) {
+      $("#bill-err").textContent = "Something went wrong: " + e.message; $("#bill-err").style.display = "block";
+    } finally { btn.disabled = false; }
+  });
+
+  // Items
+  const examples = ["Parle G 800g", "Lifebuoy 125gm", "hawai chappal 199", "Sona masoori loose 25kg", "Amul ghee 1L", "Fevicol 100g", "ಬಟ್ಟೆ ಸೋಪು 4pc", "cotton shirt 899"];
+  $("#chips").innerHTML = examples.map((e) => `<button class="chip" type="button">${esc(e)}</button>`).join("");
+  $("#chips").addEventListener("click", (ev) => {
+    if (!ev.target.classList.contains("chip")) return;
+    const t = $("#items"); t.value = (t.value.trim() ? t.value.trim() + "\n" : "") + ev.target.textContent;
+  });
+  $("#clear-items").addEventListener("click", () => { $("#items").value = ""; $("#out-items").hidden = true; $("#items-progress").style.display = "none"; });
+
   function rateCell(r) {
-    if (r.status === "certain") return `<span class="rate">${r.rate}%</span>`;
-    if (r.status === "ask") return `<span class="ask">Ask: ${esc(r.ask)}</span>`;
-    return `<span class="ask">Check with your accountant</span>`;
+    if (r.status === "certain") return pill(r.rate);
+    if (r.status === "ask") return `<span class="v-ask">Ask: ${esc(r.ask)}</span>`;
+    return `<span class="v-ask">Check with your accountant</span>`;
   }
 
   $("#run-items").addEventListener("click", async () => {
     const items = $("#items").value.split("\n").map((s) => s.trim()).filter(Boolean);
     if (!items.length) return;
-    const btn = $("#run-items"); btn.disabled = true; btn.textContent = "Working…";
+    const btn = $("#run-items"); btn.disabled = true;
+    $("#items-err").style.display = "none"; $("#out-items tbody").innerHTML = ""; $("#out-items").hidden = true;
+    $("#items-progress").style.display = "block"; setBar($("#items-bar"), 0, items.length);
+    const shown = new Set();
     try {
-      const res = await fetch("/api/classify", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({items})});
-      const data = await res.json();
-      const tb = $("#out-items tbody"); tb.innerHTML = "";
-      for (const r of data.rows || []) {
-        tb.insertAdjacentHTML("beforeend", `<tr><td>${esc(r.item)}</td><td>${r.heading ? `<span class="chip">${r.heading}</span>` : "—"}</td><td>${rateCell(r)}</td><td>${esc(r.entry_text || "")}</td></tr>`);
-      }
-      $("#out-items").hidden = false;
-    } finally { btn.disabled = false; btn.textContent = "Find HSN and GST"; }
-  });
-
-  $("#run-bill").addEventListener("click", async () => {
-    const f = $("#photo").files[0];
-    if (!f) return;
-    const btn = $("#run-bill"); btn.disabled = true; btn.textContent = "Reading the bill…";
-    try {
-      const fd = new FormData(); fd.append("photo", f);
-      const res = await fetch("/api/bill", {method: "POST", body: fd});
-      const d = await res.json();
-      $("#bill-head").textContent = [d.supplier, d.invoice_no, d.invoice_date].filter(Boolean).join(" · ");
-      const tb = $("#out-bill tbody"); tb.innerHTML = "";
-      for (const l of d.lines || []) {
-        const v = l.verdict === "ok" ? `<span class="ok">Correct</span>`
-          : l.verdict === "overcharged" ? `<span class="bad">Overcharged${l.rupees ? ` ₹${l.rupees}` : ""}</span>`
-          : l.verdict === "undercharged" ? `<span class="bad">Undercharged${l.rupees ? ` ₹${Math.abs(l.rupees)}` : ""}</span>`
-          : (l.ask ? `<span class="ask">Ask: ${esc(l.ask)}</span>` : `<span class="ask">Check</span>`);
-        tb.insertAdjacentHTML("beforeend", `<tr><td>${esc(l.item)}</td><td>${l.charged_pct ?? "—"}%</td><td>${l.official_pct != null ? l.official_pct + "%" : "—"}</td><td>${v}</td></tr>`);
-      }
-      $("#out-bill").hidden = false;
-      $("#bill-total").innerHTML = d.overcharged_rupees > 0 ? `<span class="bad">Extra GST charged on this bill: ₹${d.overcharged_rupees}</span>` : "";
-    } finally { btn.disabled = false; btn.textContent = "Check this bill"; }
+      const start = await (await fetch("/api/jobs/classify", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({items})})).json();
+      if (!start.id) throw new Error(start.detail || "Could not start.");
+      const j = await poll(start.id, (s) => {
+        setBar($("#items-bar"), s.done, s.total);
+        $("#items-ptext").textContent = `Checked ${s.done} of ${s.total} items`;
+        $("#items-time").textContent = s.elapsed + " s";
+        (s.rows || []).forEach((r) => {
+          if (shown.has(r.item)) return; shown.add(r.item);
+          $("#out-items").hidden = false;
+          $("#out-items tbody").insertAdjacentHTML("beforeend", `<tr class="new"><td>${esc(r.item)}</td><td>${r.heading ? `<span class="hsn">${r.heading}</span>` : "—"}</td><td>${rateCell(r)}</td><td class="entry entry-col">${esc(r.entry_text || "")}</td></tr>`);
+        });
+      });
+      if (j.stage === "error") throw new Error(j.error);
+    } catch (e) {
+      $("#items-err").textContent = "Something went wrong: " + e.message; $("#items-err").style.display = "block";
+    } finally { btn.disabled = false; }
   });
 </script>
 </body>

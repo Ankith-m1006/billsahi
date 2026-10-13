@@ -17,3 +17,5 @@ data/sft/
 runs/*.err
 runs/*.log
 data/test/handset_draft.csv
+data/render_service.json
+POST_DRAFT.md
