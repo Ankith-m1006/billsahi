@@ -2,17 +2,19 @@
 import contextvars
 import os
 import pathlib
+import re
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import sentry_sdk
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 import bill
+import ledger
 import llms
 import pipeline
 from db import env
@@ -89,13 +91,13 @@ def _run_items(job, items):
         job["error"], job["stage"] = str(ex)[:300], "error"
 
 
-def _run_bill(job, data, mime):
+def _run_bill(job, data, mime, shop=None, shop_gstin=None):
     try:
         with sentry_sdk.start_transaction(op="hsn.bill", name="check bill photo"):
             job["stage"] = "reading"
             read = bill.read_bill(data, mime)
             lines = (read.get("lines") or [])[:60]
-            job.update(stage="checking", total=len(lines), meta={k: read.get(k) for k in ("supplier", "invoice_no", "invoice_date")})
+            job.update(stage="checking", total=len(lines), meta={k: read.get(k) for k in ("supplier", "invoice_no", "invoice_date", "supplier_gstin", "buyer", "buyer_gstin")})
 
             def one(line):
                 c = bill.check_line(line, llm())
@@ -104,8 +106,31 @@ def _run_bill(job, data, mime):
                     job["done"] += 1
                 return c
             checked = _map(one, lines)
+        recon = ledger.reconcile(read, checked)
+        if not recon["ok"]:
+            # The lines don't add up to the printed total, so the photo was probably misread (rows shifted, a total
+            # row taken as an item). A wrong rupee verdict is worse than none: those lines go back to "check".
+            for c in checked:
+                if c["verdict"] in ("overcharged", "undercharged"):
+                    c["verdict"], c["rupees"] = "check", None
+                    c["ask"] = "The bill's lines don't add up to its total, so this line may be misread. Check it on the paper bill."
+            for c in checked:
+                c["unit_cost"] = None  # misread prices must not enter the price memory
         over = sum(c["rupees"] for c in checked if c["rupees"] and c["rupees"] > 0)
-        job["result"] = {**job["meta"], "lines": checked, "overcharged_rupees": round(over, 2)}
+        itc = ledger.itc_check(read, checked, shop_gstin)
+        alerts, bill_id, saved_error = [], None, None
+        if shop:
+            job["stage"] = "saving"
+            try:
+                alerts = ledger.price_alerts(shop, checked)
+                bill_id = ledger.save_bill(shop, read, checked, itc)
+            except Exception as ex:  # the GST check is still useful if the shop's records can't be reached
+                saved_error = str(ex)[:200]
+                sentry_sdk.capture_exception(ex)
+        job["result"] = {**job["meta"], "lines": checked, "overcharged_rupees": round(over, 2), "itc": itc,
+                         "price_alerts": alerts, "bill_id": bill_id, "already_saved": bool(shop) and bill_id is None and not saved_error,
+                         "save_error": saved_error, "amount_due": ledger.num(read.get("amount_due")),
+                         "bill_total": ledger.num(read.get("bill_total")), "reconcile": recon}
         job["stage"] = "done"
     except Exception as ex:
         job["error"], job["stage"] = str(ex)[:300], "error"
@@ -121,14 +146,47 @@ def start_classify(body: Items):
     return {"id": job["id"], "total": job["total"]}
 
 
+SHOP_RE = re.compile(r"^[a-z0-9-]{4,40}$")
+
+
+def _shop(shop: str | None) -> str | None:
+    if shop is None or shop == "":
+        return None
+    if not SHOP_RE.match(shop):
+        raise HTTPException(400, "Bad shop code.")
+    return shop
+
+
 @app.post("/api/jobs/bill")
-async def start_bill(photo: UploadFile = File(...)):
+async def start_bill(photo: UploadFile = File(...), shop: str | None = Form(None), shop_gstin: str | None = Form(None)):
     data = await photo.read()
     if len(data) > 8 * 1024 * 1024:
         raise HTTPException(413, "Photo is larger than 8 MB.")
     job = _new_job("bill", 0)
-    threading.Thread(target=contextvars.copy_context().run, args=(_run_bill, job, data, photo.content_type or "image/jpeg"), daemon=True).start()
+    args = (_run_bill, job, data, photo.content_type or "image/jpeg", _shop(shop), (shop_gstin or "").strip()[:20] or None)
+    threading.Thread(target=contextvars.copy_context().run, args=args, daemon=True).start()
     return {"id": job["id"]}
+
+
+class Payment(BaseModel):
+    supplier: str
+    amount: float
+    note: str | None = None
+
+
+@app.get("/api/shop/{shop}")
+def shop_records(shop: str):
+    shop = _shop(shop)
+    return {"dues": ledger.dues(shop), "bills": ledger.history(shop)}
+
+
+@app.post("/api/shop/{shop}/payments")
+def add_payment(shop: str, body: Payment):
+    shop = _shop(shop)
+    if not (0 < body.amount < 1e9):
+        raise HTTPException(400, "Amount must be more than zero.")
+    ledger.add_payment(shop, body.supplier, body.amount, (body.note or "")[:200] or None)
+    return {"dues": ledger.dues(shop)}
 
 
 @app.get("/api/jobs/{job_id}")

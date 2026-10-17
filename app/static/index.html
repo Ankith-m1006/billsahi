@@ -104,6 +104,33 @@
     .mast .meta { display: none; }
   }
   [hidden] { display: none !important; }
+
+  /* after the line check: credit readiness, dearer-than-before prices */
+  .after { margin-top: 26px; font-family: "IBM Plex Sans", sans-serif; }
+  .after h3 { font-family: Fraunces, Georgia, serif; font-size: 1.15rem; margin: 0 0 8px; letter-spacing: -.01em; }
+  .sub { color: var(--ink-3); font-size: .84rem; margin: -4px 0 10px; }
+  .chk { display: grid; grid-template-columns: 22px 1fr; gap: 4px 8px; padding: 7px 0; border-bottom: 1px dotted var(--rule); font-size: .9rem; }
+  .chk .m { font-weight: 700; } .chk .m.ok { color: var(--money); } .chk .m.bad { color: var(--ledger); }
+  .chk small { grid-column: 2; color: var(--ink-3); font-family: var(--mono); font-size: .76rem; overflow-wrap: anywhere; }
+  .risk { margin-top: 10px; padding: 10px 12px; background: var(--amber-soft); color: var(--amber); font-size: .9rem; }
+  .risk.ok { background: var(--money-soft); color: var(--money); }
+  .alert { padding: 8px 0; border-bottom: 1px dotted var(--rule); font-size: .9rem; }
+  .alert b { color: var(--ledger); }
+  .alert small { display: block; color: var(--ink-3); font-family: var(--mono); font-size: .76rem; }
+  .field { display: flex; gap: 10px; align-items: center; margin-top: 14px; font-size: .88rem; color: var(--ink-2); }
+  .field input, .pay input { font: 14px var(--mono); padding: 8px 10px; border: 1px solid var(--rule-strong); border-radius: 3px; background: var(--paper); color: var(--ink); min-width: 0; }
+  .field input { flex: 1; max-width: 220px; text-transform: uppercase; }
+
+  /* My suppliers: who is owed what */
+  .book { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .book th { text-align: left; font-weight: 500; color: var(--ink-3); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--rule-strong); padding: 6px 4px; }
+  .book td { border-bottom: 1px dotted var(--rule); padding: 8px 4px; vertical-align: top; }
+  .book .n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .book .owed { font-weight: 600; color: var(--ledger); }
+  .book small { color: var(--ink-3); display: block; font-size: .76rem; }
+  .pay { display: grid; grid-template-columns: 1fr 120px auto; gap: 8px; margin-top: 16px; }
+  .shopline { font-size: .8rem; color: var(--ink-3); margin-top: 16px; font-family: var(--mono); overflow-wrap: anywhere; }
+  @media (max-width: 520px) { .pay { grid-template-columns: 1fr 1fr; } .pay .go { grid-column: 1 / -1; } .book { font-size: .82rem; } }
 </style>
 </head>
 <body>
@@ -117,12 +144,13 @@
 <main>
   <div class="wrap grid">
     <section>
-      <h1>Is your supplier charging <span>the right GST?</span></h1>
-      <p class="lead">Photograph a supplier's bill. BillSahi checks every line against the official GST rate and tells you, in rupees, what you were overcharged. Or type your items the way you write them and get the HSN code.</p>
+      <h1>Is your supplier's bill <span>sahi?</span></h1>
+      <p class="lead">Photograph a supplier's bill. BillSahi checks every line against the official GST rate, tells you whether the bill is good enough to claim the GST back, warns you when a supplier charges more than you paid before, and keeps count of what you owe each supplier.</p>
 
       <div class="switch" role="tablist">
         <button role="tab" aria-selected="true" data-tab="bill">Check a bill</button>
         <button role="tab" aria-selected="false" data-tab="items">HSN for my items</button>
+        <button role="tab" aria-selected="false" data-tab="book">My suppliers</button>
       </div>
 
       <div id="tab-bill">
@@ -132,7 +160,20 @@
           <small>A clear photo of a GST tax invoice. JPG or PNG, up to 8 MB.</small>
         </label>
         <div class="picked" id="picked"><img id="thumb" alt="Selected bill"><span class="fn" id="fname"></span></div>
+        <label class="field">Your GSTIN <input id="my-gstin" maxlength="15" placeholder="optional" autocomplete="off"></label>
         <div class="actions"><button class="go" id="run-bill" disabled>Check this bill</button></div>
+      </div>
+
+      <div id="tab-book" hidden>
+        <p class="lead" style="margin-bottom:14px">Every bill you check is kept here. BillSahi adds it to what you owe that supplier and remembers what you paid for each item.</p>
+        <div id="book"></div>
+        <form class="pay" id="pay">
+          <input id="pay-sup" list="sups" placeholder="Supplier you paid" required aria-label="Supplier">
+          <datalist id="sups"></datalist>
+          <input id="pay-amt" type="number" min="1" step="0.01" placeholder="Amount" required aria-label="Amount in rupees">
+          <button class="go" type="submit">Record payment</button>
+        </form>
+        <div class="shopline" id="shopline"></div>
       </div>
 
       <div id="tab-items" hidden>
@@ -155,6 +196,7 @@
         <div class="stamp" id="stamp"></div>
         <div class="err" id="err"></div>
       </div>
+      <div class="after" id="after" hidden></div>
     </section>
   </div>
 
@@ -176,12 +218,22 @@
   const inr = (n) => "₹" + Number(n).toLocaleString("en-IN", {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const pct = (r) => r == null ? "—" : r + "%";
 
+  // The shop's records live under a private code kept on this phone. ?shop=<code> opens another book (the demo shop).
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  const urlShop = new URLSearchParams(location.search).get("shop");
+  let shop = (urlShop && /^[a-z0-9-]{4,40}$/.test(urlShop)) ? urlShop : store.get("billsahi-shop");
+  if (!shop) { shop = "shop-" + Math.random().toString(36).slice(2, 10); store.set("billsahi-shop", shop); }
+  $("#my-gstin").value = store.get("billsahi-gstin") || "";
+  $("#my-gstin").addEventListener("change", (e) => store.set("billsahi-gstin", e.target.value.trim().toUpperCase()));
+
   let mode = "bill";
   document.querySelectorAll(".switch button").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll(".switch button").forEach((x) => x.setAttribute("aria-selected", x === b));
     mode = b.dataset.tab;
     $("#tab-bill").hidden = mode !== "bill";
     $("#tab-items").hidden = mode !== "items";
+    $("#tab-book").hidden = mode !== "book";
+    if (mode === "book") loadBook();
     resetReceipt(mode === "bill" ? "Upload a bill on the left.<br>Each line appears here as it is checked." : "Type items on the left.<br>Each one appears here with its HSN and rate.");
   }));
 
@@ -194,6 +246,7 @@
       : '<span>Item · HSN</span><span class="n"></span><span class="n">GST</span><span class="n"></span>';
     $("#r-lines").innerHTML = `<div class="r-empty">${emptyHtml}</div>`;
     $("#r-total").style.display = "none"; $("#stamp").style.display = "none"; $("#err").style.display = "none";
+    $("#after").hidden = true; $("#after").innerHTML = "";
     bar(0, 0);
   }
   function bar(done, total, waiting) {
@@ -244,17 +297,19 @@
     resetReceipt("Reading the bill…");
     const shown = new Set();
     try {
-      const fd = new FormData(); fd.append("photo", file);
+      const fd = new FormData(); fd.append("photo", file); fd.append("shop", shop);
+      if ($("#my-gstin").value.trim()) fd.append("shop_gstin", $("#my-gstin").value.trim().toUpperCase());
       const start = await (await fetch("/api/jobs/bill", {method: "POST", body: fd})).json();
       if (!start.id) throw new Error(start.detail || "Could not start the check.");
       const j = await poll(start.id, (s) => {
         $("#r-time").textContent = s.elapsed + " s";
         if (s.stage === "queued" || s.stage === "reading") { bar(0, 0, true); $("#r-stage").textContent = "Reading the bill photo"; }
         if (s.stage === "checking") { bar(s.done, s.total); $("#r-stage").textContent = `Checked ${s.done} of ${s.total} lines`; }
+        if (s.stage === "saving") { $("#r-stage").textContent = "Comparing prices with your earlier bills"; }
         if (s.meta) $("#r-sub").textContent = [s.meta.supplier, s.meta.invoice_no, s.meta.invoice_date].filter(Boolean).join(" · ");
         (s.rows || []).forEach((l) => {
           const key = l.item + "|" + l.taxable_value; if (shown.has(key)) return; shown.add(key);
-          addLine(`<div class="r-line"><span class="it">${esc(l.item)}<span class="hs">HSN ${esc(l.heading || "—")}${l.printed_hsn && l.heading && !l.hsn_matches ? " · bill says " + esc(l.printed_hsn) : ""}</span></span><span class="n">${pct(l.charged_pct)}</span><span class="n">${pct(l.official_pct)}</span>${billResult(l)}${l.ask ? `<span class="note">${esc(l.ask)}</span>` : ""}</div>`);
+          addLine(`<div class="r-line"><span class="it">${esc(l.item)}<span class="hs">HSN ${esc(l.heading || "—")}${l.printed_hsn && l.heading && !l.hsn_matches ? " · bill says " + esc(l.printed_hsn) : ""}${l.basis === "bill_hsn" ? " · read from the bill's HSN" : ""}</span></span><span class="n">${pct(l.charged_pct)}</span><span class="n">${pct(l.official_pct)}</span>${billResult(l)}${l.ask ? `<span class="note">${esc(l.ask)}</span>` : ""}</div>`);
         });
       });
       if (j.stage === "error") throw new Error(j.error);
@@ -264,15 +319,65 @@
       $("#r-stage").textContent = `All ${lines.length} lines checked`;
       $("#r-total").innerHTML = `<div class="row big ${over > 0 ? "bad" : "ok"}"><span>Extra GST charged</span><span>${inr(over)}</span></div>
         <div class="row"><span>${n("ok")} correct · ${n("overcharged")} overcharged · ${n("undercharged")} under · ${n("check")} to confirm</span></div>
-        <div class="tip">${over > 0 ? "Ask the supplier for a corrected invoice or a credit note for the marked lines." : "Every line we could check matches the official rate."}</div>`;
+        <div class="tip">${j.result.reconcile && !j.result.reconcile.ok ? "Part of this photo was misread, so no line is marked. See the note below." : over > 0 ? "Ask the supplier for a corrected invoice or a credit note for the marked lines." : "Every line we could check matches the official rate."}</div>`;
       $("#r-total").style.display = "block";
       const st = $("#stamp");
-      st.className = "stamp" + (over > 0 ? "" : " ok");
-      st.innerHTML = over > 0 ? `<b>${inr(over)}</b>EXTRA GST` : "<b>✓</b>RATES OK";
+      const misread = j.result.reconcile && !j.result.reconcile.ok;
+      st.className = "stamp" + (over > 0 || misread ? "" : " ok");
+      st.innerHTML = misread ? "<b>?</b>RETAKE PHOTO" : over > 0 ? `<b>${inr(over)}</b>EXTRA GST` : "<b>✓</b>RATES OK";
       st.style.display = "block";
+      renderAfter(j.result);
     } catch (e) {
       $("#err").textContent = "Something went wrong: " + e.message; $("#err").style.display = "block";
     } finally { btn.disabled = false; }
+  });
+
+  function renderAfter(r) {
+    const itc = r.itc; let h = "";
+    if (r.reconcile && !r.reconcile.ok) h += `<div class="risk" style="margin:0 0 18px">This photo was partly misread: the lines add up to ${inr(r.reconcile.lines_sum)} but the bill's total is ${inr(r.reconcile.bill_total)}. BillSahi didn't mark any line as overcharged and didn't save these prices. Retake the photo closer and flat, in good light, or send the original photo instead of a forwarded one.</div>`;
+    if (itc) {
+      h += '<h3>Can you claim this GST back?</h3><p class="sub">What a regular GST dealer needs on a purchase bill to claim input tax credit.</p>';
+      h += itc.checks.map((c) => `<div class="chk"><span class="m ${c.ok ? "ok" : "bad"}">${c.ok ? "✓" : "✗"}</span><span>${esc(c.label)}</span><small>${esc(c.detail)}</small></div>`).join("");
+      const money = itc.no_tax ? (itc.purchase_value ? `${inr(itc.purchase_value)} bought with no GST shown. ` : "")
+        : (itc.credit_at_risk ? `${inr(itc.credit_at_risk)} of GST credit at risk. ` : "");
+      h += `<div class="risk ${itc.ready ? "ok" : ""}">${itc.ready ? "✓ Ready for credit." : esc(money + itc.note)}</div>`;
+    }
+    const al = r.price_alerts || [];
+    h += '<h3 style="margin-top:22px">Paid less before?</h3>';
+    h += al.length ? al.map((a) => `<div class="alert"><b>${esc(a.item)}</b>: ${inr(a.unit_cost)} a unit here, ${inr(a.best_cost)} from ${esc(a.best_supplier || "another supplier")}${a.best_date ? " on " + esc(a.best_date) : ""}. <b>${inr(a.extra_total || a.extra_per_unit)} extra</b> on this bill.<small>matched with "${esc(a.best_item)}"</small></div>`).join("")
+      : '<p class="sub">Nothing on this bill costs more than you have paid before. BillSahi gets better at this with every bill you check.</p>';
+    if (r.bill_id) h += `<p class="sub" style="margin-top:12px">Saved to <a href="#" id="to-book">My suppliers</a>${r.bill_total ? ": " + inr(r.bill_total) + " added to what you owe " + esc(r.supplier || "this supplier") : ""}.</p>`;
+    else if (r.already_saved) h += '<p class="sub" style="margin-top:12px">This invoice is already in My suppliers, so it was not counted twice.</p>';
+    $("#after").innerHTML = h; $("#after").hidden = false;
+    const tb = $("#to-book"); if (tb) tb.addEventListener("click", (e) => { e.preventDefault(); document.querySelector('[data-tab="book"]').click(); });
+  }
+
+  async function loadBook() {
+    $("#shopline").textContent = "Your shop code: " + shop + " (kept on this phone)";
+    $("#book").innerHTML = '<p class="sub">Loading…</p>';
+    try {
+      const d = await (await fetch("/api/shop/" + shop)).json();
+      if (!d.dues || !d.dues.length) { $("#book").innerHTML = '<p class="sub">No bills yet. Check a bill and it appears here.</p>'; return; }
+      const owed = d.dues.reduce((a, x) => a + x.owed, 0);
+      $("#book").innerHTML = '<table class="book"><thead><tr><th>Supplier</th><th class="n">Billed</th><th class="n">Paid</th><th class="n">You owe</th></tr></thead><tbody>' +
+        d.dues.map((x) => `<tr><td>${esc(x.supplier)}<small>${x.bills ? x.bills + " bill" + (x.bills > 1 ? "s" : "") : "paid in advance"}${x.supplier_says != null && Math.abs(x.supplier_says - x.billed) > 1 ? " · supplier's own balance: " + inr(x.supplier_says) : ""}</small></td><td class="n">${inr(x.billed)}</td><td class="n">${inr(x.paid)}</td><td class="n owed">${inr(x.owed)}</td></tr>`).join("") +
+        `</tbody><tfoot><tr><td><b>Total</b></td><td></td><td></td><td class="n owed">${inr(owed)}</td></tr></tfoot></table>`;
+      $("#sups").innerHTML = d.dues.map((x) => `<option value="${esc(x.supplier)}">`).join("");
+      // the receipt on the right becomes the list of bills on file
+      $("#r-sub").textContent = d.bills.length + " bill" + (d.bills.length > 1 ? "s" : "") + " on file";
+      $("#r-stage").textContent = "Ready for GST credit?"; $("#r-time").textContent = "";
+      $("#r-cols").innerHTML = '<span>Supplier · bill</span><span class="n">Lines</span><span class="n">Credit</span><span class="n">Total</span>';
+      $("#r-lines").innerHTML = d.bills.map((b) => `<div class="r-line"><span class="it">${esc(b.supplier || "—")}<span class="hs">${esc(b.invoice_no || "")}${b.invoice_date ? " · " + esc(b.invoice_date) : ""}</span></span><span class="n">${b.lines}</span><span class="n">${b.itc_ready ? '<span class="v ok">✓</span>' : '<span class="v bad">✗</span>'}</span><span class="n">${inr(b.total)}</span></div>`).join("");
+      const risk = d.bills.reduce((a, b) => a + (b.credit_at_risk || 0), 0), ready = d.bills.filter((b) => b.itc_ready).length;
+      $("#r-total").innerHTML = `<div class="row big ${ready === d.bills.length ? "ok" : "bad"}"><span>Ready for credit</span><span>${ready} of ${d.bills.length}</span></div>${risk ? `<div class="row"><span>GST credit at risk</span><span>${inr(risk)}</span></div>` : ""}<div class="tip">From the day you leave composition, ask every supplier to print your GSTIN on the bill.</div>`;
+      $("#r-total").style.display = "block";
+    } catch (e) { $("#book").innerHTML = '<p class="sub">Could not load your records.</p>'; }
+  }
+  $("#pay").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const body = {supplier: $("#pay-sup").value, amount: Number($("#pay-amt").value)};
+    const r = await fetch("/api/shop/" + shop + "/payments", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+    if (r.ok) { $("#pay-amt").value = ""; $("#pay-sup").value = ""; loadBook(); }
   });
 
   // items
@@ -314,6 +419,7 @@
       $("#err").textContent = "Something went wrong: " + e.message; $("#err").style.display = "block";
     } finally { btn.disabled = false; }
   });
+  if (location.hash === "#book") document.querySelector('[data-tab="book"]').click();
 </script>
 </body>
 </html>
