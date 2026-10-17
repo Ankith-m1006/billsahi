@@ -5,6 +5,7 @@
 
 Everything here is plain code and SQL; no model is involved.
 """
+import difflib
 import re
 import threading
 import time
@@ -167,7 +168,9 @@ def same_item(a: dict, b: dict) -> bool:
     ta, tb = set(a["tokens"]), set(b["tokens"])
     if not ta or not tb:
         return False
-    return len(ta & tb) / len(ta | tb) >= 0.6
+    # suppliers spell brands differently ("LIFEBOY" / "LIFEBUOY"), so near-identical words count as shared
+    shared = sum(1 for x in ta if x in tb or any(len(x) > 3 and difflib.SequenceMatcher(None, x, y).ratio() >= 0.8 for y in tb))
+    return shared / (len(ta) + len(tb) - shared) >= 0.6
 
 
 def unit_cost(line: dict) -> float | None:
