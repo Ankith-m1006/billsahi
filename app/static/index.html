@@ -357,6 +357,8 @@
     $("#book").innerHTML = '<p class="sub">Loading…</p>';
     try {
       const d = await (await fetch("/api/shop/" + shop)).json();
+      $("#pay").hidden = !!d.demo;
+      if (d.demo) $("#shopline").textContent = "Demo book: real bills from a supermarket near Pavagada, Tumkur. Read-only; check your own bill to start your book.";
       if (!d.dues || !d.dues.length) { $("#book").innerHTML = '<p class="sub">No bills yet. Check a bill and it appears here.</p>'; return; }
       const owed = d.dues.reduce((a, x) => a + x.owed, 0);
       $("#book").innerHTML = '<table class="book"><thead><tr><th>Supplier</th><th class="n">Billed</th><th class="n">Paid</th><th class="n">You owe</th></tr></thead><tbody>' +
@@ -378,6 +380,7 @@
     const body = {supplier: $("#pay-sup").value, amount: Number($("#pay-amt").value)};
     const r = await fetch("/api/shop/" + shop + "/payments", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
     if (r.ok) { $("#pay-amt").value = ""; $("#pay-sup").value = ""; loadBook(); }
+    else { const e = await r.json().catch(() => ({})); $("#shopline").textContent = e.detail || "Could not record the payment."; }
   });
 
   // items

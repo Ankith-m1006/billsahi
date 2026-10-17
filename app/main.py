@@ -147,6 +147,7 @@ def start_classify(body: Items):
 
 
 SHOP_RE = re.compile(r"^[a-z0-9-]{4,40}$")
+DEMO_SHOPS = {s for s in os.environ.get("DEMO_SHOPS", "kvr-demo").split(",") if s}  # read-only books anyone can open
 
 
 def _shop(shop: str | None) -> str | None:
@@ -163,7 +164,10 @@ async def start_bill(photo: UploadFile = File(...), shop: str | None = Form(None
     if len(data) > 8 * 1024 * 1024:
         raise HTTPException(413, "Photo is larger than 8 MB.")
     job = _new_job("bill", 0)
-    args = (_run_bill, job, data, photo.content_type or "image/jpeg", _shop(shop), (shop_gstin or "").strip()[:20] or None)
+    shop = _shop(shop)
+    if shop in DEMO_SHOPS:
+        shop = None  # the demo book stays as it is; the bill is still checked, just not saved
+    args = (_run_bill, job, data, photo.content_type or "image/jpeg", shop, (shop_gstin or "").strip()[:20] or None)
     threading.Thread(target=contextvars.copy_context().run, args=args, daemon=True).start()
     return {"id": job["id"]}
 
@@ -177,12 +181,14 @@ class Payment(BaseModel):
 @app.get("/api/shop/{shop}")
 def shop_records(shop: str):
     shop = _shop(shop)
-    return {"dues": ledger.dues(shop), "bills": ledger.history(shop)}
+    return {"dues": ledger.dues(shop), "bills": ledger.history(shop), "demo": shop in DEMO_SHOPS}
 
 
 @app.post("/api/shop/{shop}/payments")
 def add_payment(shop: str, body: Payment):
     shop = _shop(shop)
+    if shop in DEMO_SHOPS:
+        raise HTTPException(403, "This is the demo shop, so it can't be changed. Check a bill to start your own book.")
     if not (0 < body.amount < 1e9):
         raise HTTPException(400, "Amount must be more than zero.")
     ledger.add_payment(shop, body.supplier, body.amount, (body.note or "")[:200] or None)
